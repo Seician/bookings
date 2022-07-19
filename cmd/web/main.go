@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/gob"
 	"fmt"
 	"github.com/Seician/bookings/internal/config"
 	"github.com/Seician/bookings/internal/handlers"
+	"github.com/Seician/bookings/internal/models"
 	"github.com/Seician/bookings/internal/render"
 	"github.com/alexedwards/scs/v2"
 	"log"
@@ -18,6 +20,9 @@ var session *scs.SessionManager
 
 // main is the main function
 func main() {
+	// what am I going to put in the session
+	gob.Register(models.Reservation{})
+
 	// change this to true when in production
 	app.InProduction = false
 
