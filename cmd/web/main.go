@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/Seician/bookings/pkg/config"
-	"github.com/Seician/bookings/pkg/handlers"
-	"github.com/Seician/bookings/pkg/render"
+	"github.com/Seician/bookings/internal/config"
+	"github.com/Seician/bookings/internal/handlers"
+	"github.com/Seician/bookings/internal/render"
 	"github.com/alexedwards/scs/v2"
 	"log"
 	"net/http"
