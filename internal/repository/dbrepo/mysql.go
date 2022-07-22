@@ -21,7 +21,7 @@ func (m *mySqlDBRepo) InsertReservation(reservation models.Reservation) (int64, 
 					start_date, end_date, room_id, created_at, updated_at)
 					values(?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	res, err := m.DB.ExecContext(
+	result, err := m.DB.ExecContext(
 		context, statement,
 		reservation.FirstName,
 		reservation.LastName,
@@ -36,7 +36,7 @@ func (m *mySqlDBRepo) InsertReservation(reservation models.Reservation) (int64, 
 		return 0, err
 	}
 
-	newId, err = res.LastInsertId()
+	newId, err = result.LastInsertId()
 	if err != nil {
 		return 0, err
 	}
@@ -64,4 +64,31 @@ func (m *mySqlDBRepo) InsertRoomRestriction(restriction models.RoomRestriction) 
 		return err
 	}
 	return nil
+}
+
+//SearchAvailabilityByDates returns true if availability exists for roomId, and false if no availability exists
+func (m *mySqlDBRepo) SearchAvailabilityByDates(start, end time.Time, roomId int) (bool, error) {
+
+	context, cancel := context2.WithTimeout(context2.Background(), 3*time.Second)
+	defer cancel()
+
+	var numRows int
+
+	query := `SELECT 
+    				count(id)
+			   FROM
+			   	    room_restrictions
+                 WHERE 
+                     room_id = ? AND
+                     ? < end_date AND ? > start_date`
+
+	row := m.DB.QueryRowContext(context, query, roomId, start, end)
+	err := row.Scan(&numRows)
+	if err != nil {
+		return false, err
+	}
+	if numRows == 0 {
+		return true, nil
+	}
+	return false, nil
 }
