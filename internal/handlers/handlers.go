@@ -12,6 +12,8 @@ import (
 	"github.com/Seician/bookings/internal/repository"
 	"github.com/Seician/bookings/internal/repository/dbrepo"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 // Repo the repository used by the handlers
@@ -66,11 +68,33 @@ func (m *Repository) PostReservation(writer http.ResponseWriter, request *http.R
 		return
 	}
 
+	sd := request.Form.Get("start_date")
+	ed := request.Form.Get("end_date")
+
+	// 2022-22-07 -- 01/02 03:04:05PM '06 -0700
+
+	layout := "2006-01-02"
+
+	starDate, err := time.Parse(layout, sd)
+	if err != nil {
+		helpers.ServerError(writer, err)
+		return
+	}
+	endDate, err := time.Parse(layout, ed)
+	if err != nil {
+		helpers.ServerError(writer, err)
+		return
+	}
+
+	roomID, err := strconv.Atoi(request.Form.Get("room_id"))
 	reservation := models.Reservation{
 		FirstName: request.Form.Get("first_name"),
 		LastName:  request.Form.Get("last_name"),
-		Email:     request.Form.Get("email"),
 		Phone:     request.Form.Get("phone"),
+		Email:     request.Form.Get("email"),
+		StartDate: starDate,
+		EndDate:   endDate,
+		RoomId:    roomID,
 	}
 	form := forms.New(request.PostForm)
 
@@ -86,6 +110,25 @@ func (m *Repository) PostReservation(writer http.ResponseWriter, request *http.R
 			Form: form,
 			Data: data,
 		})
+		return
+	}
+	newReservationID, err := m.DB.InsertReservation(reservation)
+	if err != nil {
+		helpers.ServerError(writer, err)
+		return
+	}
+
+	restriction := models.RoomRestriction{
+		StartDate:     starDate,
+		EndDate:       endDate,
+		RoomId:        roomID,
+		ReservationId: int(newReservationID),
+		RestrictionId: 1,
+	}
+
+	err = m.DB.InsertRoomRestriction(restriction)
+	if err != nil {
+		helpers.ServerError(writer, err)
 		return
 	}
 	m.App.Session.Put(request.Context(), "reservation", reservation)
