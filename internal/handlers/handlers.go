@@ -427,19 +427,37 @@ func (m *Repository) PostShowLogin(writer http.ResponseWriter, request *http.Req
 
 	form := forms.New(request.PostForm)
 	form.Required("email", "password")
+	form.IsEmail("email")
 
 	if !form.Valid() {
-		m.App.Session.Put(request.Context(), "error", "Invalid login credentials")
-		http.Redirect(writer, request, "/user/login", http.StatusSeeOther)
+		render.Template(writer, request, "login.page.tmpl", &models.TemplateData{
+			Form: form,
+		})
 		return
 	}
 
 	id, _, err := m.DB.Authenticate(email, password)
 	if err != nil {
 		log.Print(err)
+
+		m.App.Session.Put(request.Context(), "error", "Invalid login credentials")
+		http.Redirect(writer, request, "/user/login", http.StatusSeeOther)
+		return
 	}
 
 	m.App.Session.Put(request.Context(), "user_id", id)
 	m.App.Session.Put(request.Context(), "flash", "Logged successfully")
 	http.Redirect(writer, request, "/", http.StatusSeeOther)
+}
+
+//Logout logs a user out
+func (m *Repository) Logout(writer http.ResponseWriter, request *http.Request) {
+	_ = m.App.Session.Destroy(request.Context())
+	_ = m.App.Session.RenewToken(request.Context())
+
+	http.Redirect(writer, request, "/user/login", http.StatusSeeOther)
+
+}
+func (m *Repository) AdminDashboard(writer http.ResponseWriter, request *http.Request) {
+	render.Template(writer, request, "admin-dashboard.page.tmpl", &models.TemplateData{})
 }

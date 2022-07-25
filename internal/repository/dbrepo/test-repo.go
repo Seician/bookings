@@ -104,7 +104,7 @@ func (m *testDBRepo) GetRoomById(id int) (models.Room, error) {
 	return room, nil
 }
 
-func (m *testDBRepo) GetUserById(id int) (models.User, error) {
+func (m *testDBRepo) GetUserByID(id int) (models.User, error) {
 	var u models.User
 
 	return u, nil
