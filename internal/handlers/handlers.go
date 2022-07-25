@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/Seician/bookings/internal/config"
 	"github.com/Seician/bookings/internal/driver"
 	"github.com/Seician/bookings/internal/forms"
@@ -179,6 +180,18 @@ func (m *Repository) PostReservation(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
 	}
+	htmlMessage := fmt.Sprintf(`
+  <h1> Reservation confirmation </h1>
+`)
+
+	// send notifications - first to guest
+	msg := models.MailData{
+		To:      reservation.Email,
+		From:    "me@yahoo.com",
+		Subject: "Reservation confirmation",
+		Content: htmlMessage,
+	}
+	m.App.MailChan <- msg
 
 	m.App.Session.Put(r.Context(), "reservation", reservation)
 
