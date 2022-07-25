@@ -2,7 +2,9 @@ package dbrepo
 
 import (
 	context2 "context"
+	"errors"
 	"github.com/Seician/bookings/internal/models"
+	"golang.org/x/crypto/bcrypt"
 	"time"
 )
 
@@ -133,6 +135,7 @@ func (m *mySqlDBRepo) SearchAvailabilityForAllRooms(start, end time.Time) ([]mod
 	return rooms, nil
 }
 
+// GetRoomById returns a room by id
 func (m *mySqlDBRepo) GetRoomById(id int) (models.Room, error) {
 
 	context, cancel := context2.WithTimeout(context2.Background(), 3*time.Second)
@@ -154,4 +157,77 @@ func (m *mySqlDBRepo) GetRoomById(id int) (models.Room, error) {
 		return room, err
 	}
 	return room, nil
+}
+
+// GetUserByID returns a user by id
+func (m *mySqlDBRepo) GetUserByID(id int) (models.User, error) {
+
+	context, cancel := context2.WithTimeout(context2.Background(), 3*time.Second)
+	defer cancel()
+
+	query := `select id, first_name, last_name, email, password, access_level, created_at, updated_at
+from users where id = ?`
+
+	row := m.DB.QueryRowContext(context, query, id)
+
+	var u models.User
+	err := row.Scan(
+		&u.ID,
+		&u.FirstName,
+		&u.LastName,
+		&u.Email,
+		&u.Password,
+		&u.AccessLevel,
+		&u.CreatedAt,
+		&u.UpdatedAt,
+	)
+	if err != nil {
+		return u, err
+	}
+	return u, nil
+}
+
+// UpdateUser updates a user in the database
+func (m *mySqlDBRepo) UpdateUser(u models.User) error {
+	context, cancel := context2.WithTimeout(context2.Background(), 3*time.Second)
+	defer cancel()
+
+	query := `
+update users set first_name = ?, last_name=?, email=?, access_level=?, updated_at=?`
+
+	_, err := m.DB.ExecContext(context, query,
+		u.FirstName,
+		u.LastName,
+		u.Email,
+		u.AccessLevel,
+		time.Now())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Authenticate the user
+func (m *mySqlDBRepo) Authenticate(email, testPassword string) (int, string, error) {
+	context, cancel := context2.WithTimeout(context2.Background(), 3*time.Second)
+	defer cancel()
+
+	var id int
+	var hashedPassword string
+
+	row := m.DB.QueryRowContext(context, "select id, password from bookings.users where email = ?", email)
+
+	err := row.Scan(&id, &hashedPassword)
+	if err != nil {
+		return id, "", err
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(testPassword))
+	if err == bcrypt.ErrMismatchedHashAndPassword {
+		return 0, "", errors.New("incorrect password")
+	} else if err != nil {
+		return 0, "", err
+	}
+
+	return id, hashedPassword, nil
 }

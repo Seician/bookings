@@ -12,6 +12,7 @@ import (
 	"github.com/Seician/bookings/internal/repository"
 	"github.com/Seician/bookings/internal/repository/dbrepo"
 	"github.com/go-chi/chi"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -404,4 +405,41 @@ func (m *Repository) BookRoom(writer http.ResponseWriter, request *http.Request)
 
 	m.App.Session.Put(request.Context(), "reservation", res)
 	http.Redirect(writer, request, "/make-reservation", http.StatusSeeOther)
+}
+
+func (m *Repository) ShowLogin(writer http.ResponseWriter, request *http.Request) {
+	render.Template(writer, request, "login.page.tmpl", &models.TemplateData{
+		Form: forms.New(nil),
+	})
+}
+
+// PostShowLogin handles logging the user in
+func (m *Repository) PostShowLogin(writer http.ResponseWriter, request *http.Request) {
+	_ = m.App.Session.RenewToken(request.Context())
+
+	err := request.ParseForm()
+	if err != nil {
+		log.Print(err)
+	}
+
+	email := request.Form.Get("email")
+	password := request.Form.Get("password")
+
+	form := forms.New(request.PostForm)
+	form.Required("email", "password")
+
+	if !form.Valid() {
+		m.App.Session.Put(request.Context(), "error", "Invalid login credentials")
+		http.Redirect(writer, request, "/user/login", http.StatusSeeOther)
+		return
+	}
+
+	id, _, err := m.DB.Authenticate(email, password)
+	if err != nil {
+		log.Print(err)
+	}
+
+	m.App.Session.Put(request.Context(), "user_id", id)
+	m.App.Session.Put(request.Context(), "flash", "Logged successfully")
+	http.Redirect(writer, request, "/", http.StatusSeeOther)
 }
