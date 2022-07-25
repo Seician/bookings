@@ -132,3 +132,26 @@ func (m *mySqlDBRepo) SearchAvailabilityForAllRooms(start, end time.Time) ([]mod
 
 	return rooms, nil
 }
+
+func (m *mySqlDBRepo) GetRoomById(id int) (models.Room, error) {
+
+	context, cancel := context2.WithTimeout(context2.Background(), 3*time.Second)
+	defer cancel()
+
+	var room models.Room
+
+	query := `select id, room_name, created_at, updated_at from rooms where id = ?`
+
+	row := m.DB.QueryRowContext(context, query, id)
+	err := row.Scan(
+		&room.ID,
+		&room.RoomName,
+		&room.CreatedAt,
+		&room.UpdatedAt,
+	)
+
+	if err != nil {
+		return room, err
+	}
+	return room, nil
+}
